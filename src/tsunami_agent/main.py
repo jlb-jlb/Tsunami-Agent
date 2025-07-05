@@ -399,7 +399,7 @@ def main(args):
         # Plugin creation workflow
         return create_plugin_workflow(args, args.vulnerability_type)
     else:
-        # Original research workflow (for testing)
+        # Original research workflow (for testing) (ITS AN ARTIFACT FROM A TUTORIAL I WATCHED FOR THIS CHALLENGE)
         return original_research_workflow(args)
 
 
