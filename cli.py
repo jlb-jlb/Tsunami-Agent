@@ -7,6 +7,8 @@ import os
 import sys
 import argparse
 from dotenv import load_dotenv
+from tsunami_agent import create_plugin_workflow
+from tsunami_agent import list_available_vulnerabilities
 
 # Load environment variables from .env file
 load_dotenv()
@@ -14,8 +16,7 @@ load_dotenv()
 # Add the src directory to the path so we can import the module
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-from tsunami_agent.main import create_plugin_workflow
-from tsunami_agent.tools import list_available_vulnerabilities
+
 
 def main():
     """Main CLI function"""
@@ -27,7 +28,8 @@ def main():
                        default='anthropic',
                        help='LLM provider to use')
     parser.add_argument('--model', '-m',
-                       default='claude-3-5-sonnet-20241022',
+                    #    default='claude-3-5-sonnet-20241022',
+                       default="claude-sonnet-4-20250514",
                        help='Model to use for generation')
     parser.add_argument('--list-vulnerabilities', '-l',
                        action='store_true',
@@ -60,7 +62,7 @@ def main():
         
         result = create_plugin_workflow(args, args.vulnerability_type)
         
-        print(f"Plugin creation completed: {result}")
+        print(f"Plugin creation completed: {result.plugin_name} {result.description}, {result.endpoints}, {result.imports}") # type: ignore
         
         # Show the created plugin directory
         plugin_dir = f"tsunami-agent-plugins/{args.vulnerability_type}_vulnerability"

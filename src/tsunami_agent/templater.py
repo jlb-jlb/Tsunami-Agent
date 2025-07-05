@@ -14,6 +14,7 @@ def create_plugin_template(args):
     plugin_name = args.plugin_name
     recommendation = args.recommendation
     java_code = getattr(args, 'java_code', None)  # Get java_code if provided
+    imports = getattr(args, 'imports', [])  # Get additional imports if provided
 
 
     pascal_case_name = to_pascal_case(plugin_name)
@@ -111,6 +112,51 @@ dependencies {{
 
     settings_gradle_content = f"rootProject.name = '{plugin_name}'"
 
+    # Generate additional imports if provided
+    additional_imports = ""
+    if imports:
+        # Filter out duplicates and standard imports that are already included
+        standard_imports = {
+            "com.google.common.base.Preconditions",
+            "com.google.common.collect.ImmutableList",
+            "com.google.common.flogger.GoogleLogger",
+            "com.google.inject.Inject",
+            "com.google.protobuf.util.Timestamps",
+            "com.google.protobuf.ByteString",
+            "com.google.tsunami.common.net.http.HttpClient",
+            "com.google.tsunami.common.net.http.HttpResponse",
+            "com.google.tsunami.common.net.http.HttpRequest",
+            "com.google.tsunami.common.data.NetworkServiceUtils",
+            "com.google.tsunami.common.time.UtcClock",
+            "com.google.tsunami.plugin.annotations.PluginInfo",
+            "com.google.tsunami.plugin.PluginType",
+            "com.google.tsunami.plugin.VulnDetector",
+            "com.google.tsunami.proto.DetectionReport",
+            "com.google.tsunami.proto.DetectionReportList",
+            "com.google.tsunami.proto.DetectionStatus",
+            "com.google.tsunami.proto.NetworkService",
+            "com.google.tsunami.proto.Severity",
+            "com.google.tsunami.proto.TargetInfo",
+            "com.google.tsunami.proto.Vulnerability",
+            "com.google.tsunami.proto.VulnerabilityId",
+            "com.google.tsunami.common.net.http.HttpHeaders",
+            "java.io.IOException",
+            "java.net.URLEncoder",
+            "java.nio.charset.StandardCharsets",
+            "java.time.Instant",
+            "java.time.Clock",
+            "java.util.regex.Pattern",
+            "java.util.regex.Matcher"
+        }
+        
+        unique_imports = []
+        for imp in imports:
+            if imp not in standard_imports and imp not in unique_imports:
+                unique_imports.append(imp)
+        
+        if unique_imports:
+            additional_imports = "\n" + "\n".join(f"import {imp};" for imp in unique_imports)
+
     # Generate the isServiceVulnerable method
     if java_code:
         # Use the provided Java code
@@ -147,6 +193,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.GoogleLogger;
 import com.google.inject.Inject;
 import com.google.protobuf.util.Timestamps;
+import com.google.protobuf.ByteString;
 import com.google.tsunami.common.net.http.HttpClient;
 import com.google.tsunami.common.net.http.HttpResponse;
 import com.google.tsunami.common.net.http.HttpRequest;
@@ -171,7 +218,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.Clock;
 import java.util.regex.Pattern;
-import java.util.regex.Matcher;
+import java.util.regex.Matcher;{additional_imports}
 
 @PluginInfo(
     type = PluginType.VULN_DETECTION,

@@ -7,7 +7,7 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
-from .tools import search_tool, wiki_tool, vulnerability_reader_tool, vulnerability_lister_tool, plugin_template_tool
+from .tools import search_tool, wiki_tool, vulnerability_reader_tool, vulnerability_lister_tool, plugin_template_tool, example_detector_reader_tool
 
 
 load_dotenv()
@@ -32,7 +32,9 @@ class PluginImplementation(BaseModel):
     recommendation: str
     endpoints: list[str]
     payloads: list[str]
+    imports: list[str] 
     java_code: str
+
 
 
 def parse_raw_json_response(output: str, vulnerability_type: str) -> PluginImplementation:
@@ -65,7 +67,8 @@ def parse_raw_json_response(output: str, vulnerability_type: str) -> PluginImple
                     description=plugin_data.get('description', f"Detects {vulnerability_type} vulnerabilities"),
                     recommendation=plugin_data.get('recommendation', f"Implement proper security measures to prevent {vulnerability_type} attacks"),
                     endpoints=plugin_data.get('endpoints', []),
-                    payloads=plugin_data.get('payloads', [])
+                    payloads=plugin_data.get('payloads', []),
+                    imports=plugin_data.get('imports', [])
                 )
             except json.JSONDecodeError as e:
                 print(f"JSON parsing failed: {e}")
@@ -93,7 +96,16 @@ def parse_raw_json_response(output: str, vulnerability_type: str) -> PluginImple
     # Extract Java code (most complex part)
     java_code = extract_java_code_from_raw_response(output)
     
-    print(f"✓ Extracted fields: vuln_type={vuln_type}, plugin_name={plugin_name}, java_code_length={len(java_code)}")
+    # Extract imports
+    imports_match = re.search(r'"imports":\s*\[([^\]]*)\]', output)
+    imports = []
+    if imports_match:
+        imports_str = imports_match.group(1)
+        # Extract individual imports from the array
+        import_matches = re.findall(r'"([^"]*)"', imports_str)
+        imports = import_matches
+    
+    print(f"✓ Extracted fields: vuln_type={vuln_type}, plugin_name={plugin_name}, java_code_length={len(java_code)}, imports={imports}")
     
     return PluginImplementation(
         vulnerability_type=vuln_type,
@@ -102,7 +114,8 @@ def parse_raw_json_response(output: str, vulnerability_type: str) -> PluginImple
         description=description,
         recommendation=recommendation,
         endpoints=[],
-        payloads=[]
+        payloads=[],
+        imports=imports
     )
 
 
@@ -236,37 +249,45 @@ def create_plugin_workflow(args, vulnerability_type: str):
         Your task is to analyze vulnerability information and create a complete Java implementation 
         for the isServiceVulnerable method in a Tsunami plugin.
         
+        WORKFLOW:
+        1. First, read the example SQL injection detector to understand the correct API patterns
+        2. Analyze the vulnerability information from the vulnerability_reader_tool. It provides solutions.
+        3. Generate Java code following the patterns from the example
+        4. List any additional imports needed that aren't in the standard template
+        
         Based on the vulnerability information provided, you need to:
         1. Extract relevant endpoints, parameters, and payloads for detection
-        2. Generate Java code for the COMPLETE isServiceVulnerable method that can detect this vulnerability and make sure that every possible attack is executed, even when the first already finds a vulnerability.
+        2. Generate Java code for the COMPLETE isServiceVulnerable method that can detect this vulnerability and make sure to implement all possible attack scenarios from the vulnerability_reader_tool. 
+        3. The code must test the Application on all written attacks, record the result of each of them and after executing the last attack, return #succesful attacks > 0
         3. Provide a clear description and recommendation
-        
-        The Java code should follow the pattern from the SQL injection example:
-        - Use HttpClient to make requests
-        - Compare baseline vs attack responses
-        - Return true if vulnerability is detected
-        - Handle exceptions properly
-        - Include proper method signature: private boolean isServiceVulnerable(NetworkService networkService)
-        - Include any helper methods needed within the java_code field
+        4. List any additional imports needed beyond the standard template
         
         CRITICAL REQUIREMENTS:
+        - Study the example detector FIRST to understand the correct API patterns
+        - Follow the exact same patterns for HTTP requests, URL building, and method signatures
         - Output ONLY a JSON object with the required fields
         - Do NOT include markdown code blocks (```json) around the JSON
         - Escape all quotes and newlines properly in the java_code field
-        - The java_code should be a COMPLETE implementation with ALL methods
-        - Do NOT truncate the response - include the complete Java code
-        - Ensure all helper methods are fully implemented and complete
-        - End each method with proper closing braces
+        - The java_code should be a COMPLETE implementation with ALL methods and not contain anything else except the code
+        - ALL helper methods MUST follow the same patterns as the example
+        - Include any additional imports needed in the "imports" array
+        - Do NOT truncate your response
+        - Do not add any explanations after creating the Structured Output as it will mess up the agent.
+        - Make sure to not write any syntax errors that cause problems. Common mistakes from your previous iterations are: 
+            - error: cannot find symbol .setBody(loginPayload) 
+            - you wrote: `.setRequestBody(payload)` but required was: .setRequestBody(ByteString.copyFromUtf8(payload)) 
         
-        Example format (ensure your java_code is COMPLETE and NOT TRUNCATED):
+        
+        Example format:
         {{
           "vulnerability_type": "SQL Injection",
           "plugin_name": "SqlInjectionDetectorPlugin",
-          "java_code": "private boolean isServiceVulnerable(NetworkService networkService) {{\\n    // COMPLETE implementation here\\n    return detectVulnerability();\\n}}\\n\\nprivate boolean detectVulnerability() {{\\n    // COMPLETE helper method\\n    return false;\\n}}",
+          "java_code": "private boolean isServiceVulnerable(NetworkService networkService) {{\\n    // Complete implementation following example patterns\\n    return false;\\n}}",
           "description": "Detects SQL injection vulnerabilities",
           "recommendation": "Use parameterized queries and input validation",
           "endpoints": ["/login", "/search"],
-          "payloads": ["' OR '1'='1", "'; DROP TABLE users; --"]
+          "payloads": ["' OR '1'='1", "'; DROP TABLE users; --"],
+          "imports": ["com.google.protobuf.ByteString", "java.net.URLEncoder"]
         }}
         
         Output format: {format_instructions}
@@ -279,14 +300,12 @@ def create_plugin_workflow(args, vulnerability_type: str):
         Vulnerability Details:
         {vulnerability_content}
         
-        Create a COMPLETE isServiceVulnerable method implementation that can detect this vulnerability.
-        IMPORTANT: Include ALL helper methods fully implemented. Do NOT truncate your response.
         Output ONLY the JSON object without markdown formatting.
         """),
         ("placeholder", "{agent_scratchpad}")
     ]).partial(format_instructions=parser.get_format_instructions())
     
-    tools = [vulnerability_reader_tool]
+    tools = [vulnerability_reader_tool, example_detector_reader_tool]
     
     agent = create_tool_calling_agent(
         llm=llm,
@@ -317,9 +336,14 @@ def create_plugin_workflow(args, vulnerability_type: str):
     output = response.get("output", "")
     print(f"Raw output length: {len(output)}")
     print(f"Raw output type: {type(output)}")
-    print(f"Raw output preview (first 500 chars): {output[:500]}...")
-    print(f"Raw output ending (last 200 chars): ...{output[-200:]}")
+    # print(f"Raw output preview (first 500 chars): {output[:500]}...")
+    # print(f"Raw output ending (last 200 chars): ...{output[-200:]}")
     print("=== END DEBUG ===\n")
+    
+    # Write the raw output to a log file for debugging
+    os.makedirs("logs", exist_ok=True)
+    # with open(f"logs/agent_output_log_{vulnerability_type}.txt", "w") as f:
+    #     f.write(output)
     
     try:
         # Extract the output from the response
@@ -344,12 +368,14 @@ def create_plugin_workflow(args, vulnerability_type: str):
         print(f"Description: {plugin_implementation.description}")
         print(f"Recommendation: {plugin_implementation.recommendation}")
         print(f"Java Code Length: {len(plugin_implementation.java_code) if plugin_implementation.java_code else 0} characters")
+        print(f"Additional Imports: {plugin_implementation.imports if plugin_implementation.imports else 'None'}")
         
-        # Step 2: Create plugin template with the generated Java code
+        # Step 2: Create plugin template with the generated Java code and imports
         template_result = create_plugin_template(
             plugin_name=plugin_implementation.plugin_name, 
             recommendation=plugin_implementation.recommendation,
-            java_code=plugin_implementation.java_code
+            java_code=plugin_implementation.java_code,
+            imports=plugin_implementation.imports
         )
         print(f"\nTemplate creation result: {template_result}")
         
