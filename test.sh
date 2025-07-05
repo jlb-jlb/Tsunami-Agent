@@ -1,0 +1,1 @@
+poetry run python -m tsunami_agent.main
