@@ -227,7 +227,7 @@ def create_plugin_workflow(args, vulnerability_type: str):
     model = args.model
 
     if args.model_provider == "openai":
-        llm = ChatOpenAI(model=model, temperature=0.0, max_tokens=4000) # type: ignore
+        llm = ChatOpenAI(model=model, temperature=0.0, max_tokens=7000) # type: ignore
     else:
         llm = ChatAnthropic(
             model_name=model,
