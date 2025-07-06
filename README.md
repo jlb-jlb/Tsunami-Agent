@@ -41,7 +41,7 @@ Supports 14 major vulnerability types:
 2. **Example Learning**: Studies existing plugin implementations
 3. **Code Generation**: Creates comprehensive detection logic
 4. **Template Integration**: Injects code into Tsunami plugin templates
-5. **Build Verification**: Ensures generated plugins compile successfully
+5. **Build Verification**: Ensures generated plugins compile successfully (TODO but tokens are expensive)
 
 ## 📋 Prerequisites
 
