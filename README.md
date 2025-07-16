@@ -14,7 +14,8 @@ An intelligent agent that automatically generates **Tsunami Security Scanner plu
 2. **Example Learning**: Studies existing plugin implementations
 3. **Code Generation**: Creates comprehensive detection logic
 4. **Template Integration**: Injects code into Tsunami plugin templates
-5. **Build Verification**: Ensures generated plugins compile successfully (TODO but tokens are expensive)
+5. **Build Verification**: Ensures generated plugins compile successfully (The Agent Debugger Chain is executed in ~50% of plugin generations and fixes the issue generally after 1 iteration)
+6. **Output**: Provides a complete Tsunami plugin ready for deployment (But maybe test first)
 
 ## 📋 Prerequisites
 
@@ -106,7 +107,10 @@ graph TD
     D --> E[Java Code + Imports]
     E --> F[Template Integration]
     F --> G[Complete Plugin]
-    G --> H[Build Verification]
+    G --> H[Debugger Chain: Build Verification]
+    H -- "Build Unsuccessful (max 3x)" --> I[Error Handling]
+    H -- "Build Successful" --> J[Plugin Output]
+
 ```
 
 ### Key Components
