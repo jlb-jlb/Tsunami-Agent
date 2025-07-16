@@ -48,7 +48,7 @@ cp .env.example .env
 poetry run python cli.py --list-vulnerabilities
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Generate a Plugin
 
@@ -79,7 +79,7 @@ plugin = create_plugin_workflow(Args(), "sql_injection")
 print(f"Generated: {plugin.plugin_name}")
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 tsunami-agent/
@@ -94,7 +94,7 @@ tsunami-agent/
 └── tests/                       # Test suite
 ```
 
-## 🔄 Workflow Architecture
+## Workflow Architecture
 
 ```mermaid
 graph TD
@@ -117,8 +117,7 @@ graph TD
 #### 2. **Tools System** (`tools.py`)
 - **Vulnerability Reader**: Parses markdown vulnerability descriptions
 - **Example Detector Reader**: Studies reference implementations
-- **Template Creator**: Generates plugin scaffolding with injected code
-- **Import Manager**: Handles dynamic import injection
+- **Template Creator**: Generates plugin with injected code
 
 #### 3. **Template Engine** (`templater.py`)
 - Creates complete Gradle-based plugin projects
@@ -126,7 +125,7 @@ graph TD
 - Generates proper plugin metadata and configuration
 - Ensures compilation compatibility
 
-## 🎛️ Configuration
+## Configuration
 
 ### Model Selection
 ```bash
@@ -138,19 +137,16 @@ poetry run python cli.py -v xss -p openai -m gpt-4
 ```
 
 
-## 🔍 Example Output
+## Example Output
 
 ### Generated Plugin Structure
 ```
-SqlInjectionDetectorPlugin_vulnerability/
+SqlInjectionDetector_vulnerability/
 ├── build.gradle                          # Gradle build configuration
 ├── settings.gradle                       # Gradle settings  
 ├── gradlew                              # Gradle wrapper script
 ├── gradle/                              # Gradle wrapper files
 │   └── wrapper/
 └── src/main/java/com/google/tsunami/plugins/raid/
-    ├── SqlinjectiondetectorpluginDetector.java           # Main detection logic
-    └── SqlinjectiondetectorpluginDetectorBootstrapModule.java  # Plugin bootstrap
-```
-
-
+    ├── SqlInjectionDetector.java           # Main detection logic
+    └── SqlInjectionDetectorBootstrapModule.java  # Plugin bootstrap

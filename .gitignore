@@ -163,3 +163,4 @@ build
 *.class
 plugins-old
 .test
+.vscode
