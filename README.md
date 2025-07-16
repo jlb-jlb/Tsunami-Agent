@@ -108,7 +108,7 @@ graph TD
     E --> F[Template Integration]
     F --> G[Complete Plugin]
     G --> H[Debugger Chain: Build Verification]
-    H -- "Build Unsuccessful (max 3x)" --> I[Error Handling]
+    H -- "Build Unsuccessful (max 3x)" --> I[Error Handling] --> H
     H -- "Build Successful" --> J[Plugin Output]
 
 ```
