@@ -164,3 +164,4 @@ build
 plugins-old
 .test
 .vscode
+.git
