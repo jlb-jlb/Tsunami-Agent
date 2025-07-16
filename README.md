@@ -2,41 +2,14 @@
 
 An intelligent agent that automatically generates **Tsunami Security Scanner plugins** for OWASP Juice Shop vulnerabilities using Large Language Models (LLMs).
 
-## 🚀 Overview
-
-The Tsunami Agent is a sophisticated tool that:
+## Overview
 - **Reads vulnerability descriptions** from markdown files
 - **Analyzes OWASP Top 10 vulnerabilities** and attack vectors
 - **Generates complete Java detection plugins** for Tsunami Security Scanner
 - **Learns from example implementations** to ensure correct API usage
 - **Automatically injects imports** and handles complex vulnerability detection logic
 
-## 🎯 Features
-
-### 🤖 AI-Powered Plugin Generation
-- **LLM Integration**: Supports OpenAI GPT-4 and Anthropic Claude models
-- **Smart Code Generation**: Creates complete `isServiceVulnerable` methods with helper functions
-- **API Pattern Learning**: Studies example plugins to understand correct Tsunami API usage
-- **Import Management**: Automatically identifies and injects required Java imports
-
-### 🔍 Vulnerability Coverage
-Supports 14 major vulnerability types:
-- SQL Injection
-- Cross-Site Scripting (XSS)
-- Broken Access Control
-- Broken Authentication
-- File Upload Vulnerabilities
-- Directory Traversal
-- Server-Side Request Forgery (SSRF)
-- XML External Entity (XXE) Injection
-- Insecure Deserialization
-- Improper Input Validation
-- Sensitive Data Exposure
-- Vulnerable Components
-- Weak Passwords
-- Unvalidated Redirects
-
-### 🛠️ Plugin Generation Pipeline
+### Plugin Generation Pipeline
 1. **Vulnerability Analysis**: Reads and parses vulnerability descriptions
 2. **Example Learning**: Studies existing plugin implementations
 3. **Code Generation**: Creates comprehensive detection logic
@@ -47,15 +20,13 @@ Supports 14 major vulnerability types:
 
 - **Python 3.10+**
 - **Poetry** (for dependency management)
-- **Java 11+** (for plugin compilation)
-- **Gradle** (for building generated plugins)
 - **API Keys**: OpenAI or Anthropic API access
 
 ## 🔧 Installation
 
 ### 1. Clone the Repository
 ```bash
-git clone <repository-url>
+git clone https://github.com/jlb-jlb/Tsunami-Agent.git
 cd tsunami-agent
 ```
 
@@ -80,8 +51,12 @@ poetry run python cli.py --list-vulnerabilities
 ## 🚀 Quick Start
 
 ### Generate a Plugin
+
 ```bash
-# Generate SQL injection detection plugin
+# List all available vulnerability types
+poetry run python cli.py -l
+
+# Generate SQL injection detection plugin 
 poetry run python cli.py -v sql_injection
 
 # Generate XSS detection plugin with specific model
@@ -129,7 +104,6 @@ graph TD
     D --> E[Java Code + Imports]
     E --> F[Template Integration]
     F --> G[Complete Plugin]
-    G --> H[Build Verification]
 ```
 
 ### Key Components

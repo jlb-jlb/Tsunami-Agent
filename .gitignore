@@ -161,3 +161,5 @@ cython_debug/
 .gradle
 build
 *.class
+plugins-old
+.test

@@ -7,25 +7,17 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
-from .tools import search_tool, wiki_tool, vulnerability_reader_tool, vulnerability_lister_tool, plugin_template_tool, example_detector_reader_tool
+from .tools import vulnerability_reader_tool, example_detector_reader_tool, read_vulnerability_file, create_plugin_template
 
 
 load_dotenv()
 
-class ResearchResponse(BaseModel):
-    topic: str
-    summary: str
-    sources: list[str]
-    tools_used: list[str]
-
-
-class PluginCreationRequest(BaseModel):
-    vulnerability_type: str
-    plugin_name: str
-    description: str
     
 
 class PluginImplementation(BaseModel):
+    """
+    Template for the Structured Output of the model
+    """
     vulnerability_type: str
     plugin_name: str
     description: str
@@ -131,13 +123,13 @@ def extract_java_code_from_raw_response(output: str) -> str:
     # Find the start of the java_code field
     java_start = output.find('"java_code":')
     if java_start == -1:
-        print("⚠ No java_code field found")
+        print("No java_code field found")
         return '// TODO: Implement vulnerability detection logic\nreturn false;'
     
     # Find the opening quote after "java_code":
     quote_start = output.find('"', java_start + len('"java_code":'))
     if quote_start == -1:
-        print("⚠ No opening quote found for java_code")
+        print("No opening quote found for java_code")
         return '// TODO: Implement vulnerability detection logic\nreturn false;'
     
     # Extract everything until we find the next JSON field or end of JSON
@@ -216,7 +208,7 @@ def extract_java_code_from_raw_response(output: str) -> str:
             print(f"✓ Extracted Java method directly: {len(java_code)} characters")
             return java_code
     
-    print("⚠ No Java code found, using fallback")
+    print("No Java code found, using fallback")
     return '// TODO: Implement vulnerability detection logic\nreturn false;'
 
 
@@ -281,13 +273,13 @@ def create_plugin_workflow(args, vulnerability_type: str):
         Example format:
         {{
           "vulnerability_type": "SQL Injection",
-          "plugin_name": "SqlInjectionDetectorPlugin",
-          "java_code": "private boolean isServiceVulnerable(NetworkService networkService) {{\\n    // Complete implementation following example patterns\\n    return false;\\n}}",
+          "plugin_name": "SqlInjection",
           "description": "Detects SQL injection vulnerabilities",
           "recommendation": "Use parameterized queries and input validation",
-          "endpoints": ["/login", "/search"],
+          "endpoints": ["/login", "/search"]
           "payloads": ["' OR '1'='1", "'; DROP TABLE users; --"],
-          "imports": ["com.google.protobuf.ByteString", "java.net.URLEncoder"]
+          "imports": ["com.google.protobuf.ByteString", "java.net.URLEncoder"],
+          "java_code": "private boolean isServiceVulnerable(NetworkService networkService) {{\\n    // Complete implementation following example patterns\\n    return false;\\n}}",
         }}
         
         Output format: {format_instructions}
@@ -297,8 +289,7 @@ def create_plugin_workflow(args, vulnerability_type: str):
         
         Vulnerability Type: {vulnerability_type}
         
-        Vulnerability Details:
-        {vulnerability_content}
+        Vulnerability Details available with the vulnerability_reader_tool
         
         Output ONLY the JSON object without markdown formatting.
         """),
@@ -320,7 +311,7 @@ def create_plugin_workflow(args, vulnerability_type: str):
     )
     
     # Read vulnerability content
-    from .tools import read_vulnerability_file, create_plugin_template
+
     vulnerability_content = read_vulnerability_file(vulnerability_type)
     
     # Generate plugin implementation
@@ -329,21 +320,13 @@ def create_plugin_workflow(args, vulnerability_type: str):
         "vulnerability_content": vulnerability_content
     })
     
-    print("\n=== RAW RESPONSE DEBUG ===")
     print(f"Response type: {type(response)}")
     print(f"Response keys: {response.keys() if isinstance(response, dict) else 'Not a dict'}")
     
     output = response.get("output", "")
     print(f"Raw output length: {len(output)}")
     print(f"Raw output type: {type(output)}")
-    # print(f"Raw output preview (first 500 chars): {output[:500]}...")
-    # print(f"Raw output ending (last 200 chars): ...{output[-200:]}")
-    print("=== END DEBUG ===\n")
     
-    # Write the raw output to a log file for debugging
-    os.makedirs("logs", exist_ok=True)
-    # with open(f"logs/agent_output_log_{vulnerability_type}.txt", "w") as f:
-    #     f.write(output)
     
     try:
         # Extract the output from the response
@@ -381,9 +364,9 @@ def create_plugin_workflow(args, vulnerability_type: str):
         
         # Verify the Java code was injected correctly
         if plugin_implementation.java_code and len(plugin_implementation.java_code) > 50:
-            print("✓ Java code successfully generated and injected into template")
+            print("Java code successfully generated and injected into template")
         else:
-            print("⚠ Warning: Java code may not have been properly generated")
+            print("Warning: Java code may not have been properly generated")
         
         return plugin_implementation
         
@@ -392,93 +375,13 @@ def create_plugin_workflow(args, vulnerability_type: str):
         print(f"Raw response: {response}")
         return None
 
-
 def main(args):
-    """Main entry point - determine if we're doing research or plugin creation."""
     if hasattr(args, 'vulnerability_type') and args.vulnerability_type:
         # Plugin creation workflow
         return create_plugin_workflow(args, args.vulnerability_type)
     else:
-        # Original research workflow (for testing) (ITS AN ARTIFACT FROM A TUTORIAL I WATCHED FOR THIS CHALLENGE)
-        return original_research_workflow(args)
-
-
-def original_research_workflow(args):
-    """Original research workflow for testing purposes."""
-    model_provider = args.model_provider
-    model = args.model
-
-    if args.model_provider == "openai":
-        llm = ChatOpenAI(model=model, temperature=0.0)
-    else:
-        llm = ChatAnthropic(
-            model_name=model,
-            temperature=0,
-            timeout=None,
-            max_retries=2,
-            stop=["\n\nHuman:"],
-        )
-
-    print(f"Using model: {model} from provider: {model_provider}")
-    parser = PydanticOutputParser(pydantic_object=ResearchResponse)
-
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", """
-        You are a security researcher that generates plugins for the Tsunami Security Scanner.
-        Wrap the output in this format and provide no other text\n{format_instructions} 
-        """),
-        ("placeholder", "{chat_history}"),
-        ("human", "{query}"),
-        ("placeholder", "{agent_scratchpad}"),
-    ]).partial(format_instructions=parser.get_format_instructions())
-
-    tools = [wiki_tool]
-
-    agent = create_tool_calling_agent(
-        llm=llm,
-        prompt=prompt,
-        tools=tools,
-    )
-
-    agent_executor = AgentExecutor(
-        agent=agent,
-        tools=tools,
-        verbose=True,
-    )
-
-    query = "What is the capital of France?"
-    raw_response = agent_executor.invoke({"query": query})
-
-    try:
-        structured_response = parser.parse(raw_response.get("output", ""))
-        print(structured_response)
-        return structured_response
-    except Exception as e:
-        print(f"Error parsing response: {e}")
-        print(f"Raw Response: {raw_response}")
-        return None
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        raise ValueError("No Vulnerability Type Provided!")
+    
 
 
 
