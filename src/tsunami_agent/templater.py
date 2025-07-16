@@ -18,7 +18,7 @@ def create_plugin_template(args):
 
 
     pascal_case_name = to_pascal_case(plugin_name)
-    folder_name = f"{plugin_name}_vulnerability"
+    folder_name = f"{plugin_name}_vulnerability" # maybe not?
     base_path = f"tsunami-agent-plugins/{folder_name}"
     java_path = os.path.join(base_path, "src/main/java/com/google/tsunami/plugins/raid")
     gradle_wrapper_path = os.path.join(base_path, "gradle/wrapper")
@@ -112,50 +112,63 @@ dependencies {{
 
     settings_gradle_content = f"rootProject.name = '{plugin_name}'"
 
-    # Generate additional imports if provided
-    additional_imports = ""
-    if imports:
-        # Filter out duplicates and standard imports that are already included
-        standard_imports = {
-            "com.google.common.base.Preconditions",
-            "com.google.common.collect.ImmutableList",
-            "com.google.common.flogger.GoogleLogger",
-            "com.google.inject.Inject",
-            "com.google.protobuf.util.Timestamps",
-            "com.google.protobuf.ByteString",
-            "com.google.tsunami.common.net.http.HttpClient",
-            "com.google.tsunami.common.net.http.HttpResponse",
-            "com.google.tsunami.common.net.http.HttpRequest",
-            "com.google.tsunami.common.data.NetworkServiceUtils",
-            "com.google.tsunami.common.time.UtcClock",
-            "com.google.tsunami.plugin.annotations.PluginInfo",
-            "com.google.tsunami.plugin.PluginType",
-            "com.google.tsunami.plugin.VulnDetector",
-            "com.google.tsunami.proto.DetectionReport",
-            "com.google.tsunami.proto.DetectionReportList",
-            "com.google.tsunami.proto.DetectionStatus",
-            "com.google.tsunami.proto.NetworkService",
-            "com.google.tsunami.proto.Severity",
-            "com.google.tsunami.proto.TargetInfo",
-            "com.google.tsunami.proto.Vulnerability",
-            "com.google.tsunami.proto.VulnerabilityId",
-            "com.google.tsunami.common.net.http.HttpHeaders",
-            "java.io.IOException",
-            "java.net.URLEncoder",
-            "java.nio.charset.StandardCharsets",
-            "java.time.Instant",
-            "java.time.Clock",
-            "java.util.regex.Pattern",
-            "java.util.regex.Matcher"
-        }
-        
-        unique_imports = []
-        for imp in imports:
-            if imp not in standard_imports and imp not in unique_imports:
-                unique_imports.append(imp)
-        
-        if unique_imports:
-            additional_imports = "\n" + "\n".join(f"import {imp};" for imp in unique_imports)
+    # Define all standard imports that should always be present
+    all_required_imports = {
+        "static com.google.common.base.Preconditions.checkNotNull",
+        "static com.google.common.collect.ImmutableList.toImmutableList",
+        "static java.lang.String.format",
+        "com.google.common.collect.ImmutableList",
+        "com.google.common.flogger.GoogleLogger",
+        "com.google.inject.Inject",
+        "com.google.protobuf.util.Timestamps",
+        "com.google.protobuf.ByteString",
+        "com.google.tsunami.common.net.http.HttpClient",
+        "com.google.tsunami.common.net.http.HttpResponse",
+        "com.google.tsunami.common.net.http.HttpRequest",
+        "com.google.tsunami.common.data.NetworkServiceUtils",
+        "com.google.tsunami.common.time.UtcClock",
+        "com.google.tsunami.plugin.annotations.PluginInfo",
+        "com.google.tsunami.plugin.PluginType",
+        "com.google.tsunami.plugin.VulnDetector",
+        "com.google.tsunami.proto.DetectionReport",
+        "com.google.tsunami.proto.DetectionReportList",
+        "com.google.tsunami.proto.DetectionStatus",
+        "com.google.tsunami.proto.NetworkService",
+        "com.google.tsunami.proto.Severity",
+        "com.google.tsunami.proto.TargetInfo",
+        "com.google.tsunami.proto.Vulnerability",
+        "com.google.tsunami.proto.VulnerabilityId",
+        "com.google.tsunami.common.net.http.HttpHeaders",
+        "java.io.IOException",
+        "java.net.URLEncoder",
+        "java.nio.charset.StandardCharsets",
+        "java.time.Instant",
+        "java.time.Clock",
+        "java.util.regex.Pattern",
+        "java.util.regex.Matcher"
+    }
+    
+    # Add LLM-provided imports to the set to ensure uniqueness
+    for imp in imports:
+        all_required_imports.add(imp)
+
+    # Sort imports for consistent generation
+    sorted_imports = sorted(list(all_required_imports))
+
+    def correct_import(imp):
+        if not imp.startswith("import "):
+            imp = f"import {imp}"
+        if not imp.endswith(";"):
+            imp = f"{imp};"
+        # f"import {imp};"
+        return imp
+    
+    # Generate the import statements
+    import_statements = ""
+    if sorted_imports:
+        import_statements = "\n" + "\n".join(correct_import(imp) for imp in sorted_imports if not imp.startswith("static"))
+        import_statements += "\n" + "\n".join(correct_import(imp) for imp in sorted_imports if imp.startswith("static"))
+
 
     # Generate the isServiceVulnerable method
     if java_code:
@@ -184,41 +197,7 @@ dependencies {{
  * limitations under the License.
  */
 package com.google.tsunami.plugins.raid;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.collect.ImmutableList.toImmutableList;
-import static java.lang.String.format;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.flogger.GoogleLogger;
-import com.google.inject.Inject;
-import com.google.protobuf.util.Timestamps;
-import com.google.protobuf.ByteString;
-import com.google.tsunami.common.net.http.HttpClient;
-import com.google.tsunami.common.net.http.HttpResponse;
-import com.google.tsunami.common.net.http.HttpRequest;
-import com.google.tsunami.common.data.NetworkServiceUtils;
-import com.google.tsunami.common.time.UtcClock;
-import com.google.tsunami.plugin.annotations.PluginInfo;
-import com.google.tsunami.plugin.PluginType;
-import com.google.tsunami.plugin.VulnDetector;
-import com.google.tsunami.proto.DetectionReport;
-import com.google.tsunami.proto.DetectionReportList;
-import com.google.tsunami.proto.DetectionStatus;
-import com.google.tsunami.proto.NetworkService;
-import com.google.tsunami.proto.Severity;
-import com.google.tsunami.proto.TargetInfo;
-import com.google.tsunami.proto.Vulnerability;
-import com.google.tsunami.proto.VulnerabilityId;
-import com.google.tsunami.common.net.http.HttpHeaders;
-
-import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.time.Clock;
-import java.util.regex.Pattern;
-import java.util.regex.Matcher;{additional_imports}
+{import_statements}
 
 @PluginInfo(
     type = PluginType.VULN_DETECTION,
