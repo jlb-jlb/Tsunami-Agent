@@ -33,6 +33,8 @@ cd tsunami-agent
 ### 2. Install Dependencies
 ```bash
 poetry install
+# or on the server
+python3 -m pip install . --break-system-packages
 ```
 
 ### 3. Configure Environment
@@ -104,6 +106,7 @@ graph TD
     D --> E[Java Code + Imports]
     E --> F[Template Integration]
     F --> G[Complete Plugin]
+    G --> H[Build Verification]
 ```
 
 ### Key Components

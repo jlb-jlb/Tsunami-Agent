@@ -365,6 +365,7 @@ zipStorePath=wrapper/dists
 
 
     print(f"Successfully created plugin template '{plugin_name}' in '{base_path}'")
+    return base_path
 
 
 if __name__ == "__main__":

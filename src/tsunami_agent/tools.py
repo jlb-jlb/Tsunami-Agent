@@ -50,9 +50,9 @@ def create_plugin_template(plugin_name: str, recommendation: str | None = None, 
                 self.imports = imports or []
         
         args = Args(plugin_name, recommendation, java_code, imports)
-        create_plugin_template(args)
+        plugin_path = create_plugin_template(args)
         
-        return f"Successfully created plugin template for '{plugin_name}'"
+        return plugin_path
     except Exception as e:
         return f"Error creating plugin template: {str(e)}"
 

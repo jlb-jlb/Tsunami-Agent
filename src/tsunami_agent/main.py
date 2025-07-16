@@ -1,5 +1,6 @@
 import os
 import argparse
+import subprocess
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
@@ -354,14 +355,93 @@ def create_plugin_workflow(args, vulnerability_type: str):
         print(f"Additional Imports: {plugin_implementation.imports if plugin_implementation.imports else 'None'}")
         
         # Step 2: Create plugin template with the generated Java code and imports
-        template_result = create_plugin_template(
+        plugin_dir = create_plugin_template(
             plugin_name=plugin_implementation.plugin_name, 
             recommendation=plugin_implementation.recommendation,
             java_code=plugin_implementation.java_code,
             imports=plugin_implementation.imports
         )
-        print(f"\nTemplate creation result: {template_result}")
-        
+        print(f"\nTemplate creation result: {plugin_dir}")
+
+        # Step 3: Verify and correct the generated plugin
+        max_retries = 3
+        for i in range(max_retries):
+            print(f"\n--- Verification Attempt {i+1}/{max_retries} ---")
+            
+            try:
+                process = subprocess.run(
+                    ["build-plugin", plugin_dir],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    timeout=120
+                )
+                verification_result = process.stdout + "\n" + process.stderr
+                
+                if process.returncode == 0:
+                    print("✓ Java plugin built successfully!")
+                    break
+            except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+                verification_result = f"Build command failed: {e}"
+
+            print(f"Build failed. Attempting to fix...")
+            print(f"Error: {verification_result}")
+
+            # If build fails, ask the LLM to fix the code
+            fix_prompt = ChatPromptTemplate.from_messages([
+                ("system", """
+                You are a Java debugging expert. The provided Java code for a Tsunami plugin has a build error.
+                Your task is to analyze the error message and the code, then provide a corrected version of the code.
+
+                CRITICAL REQUIREMENTS:
+                - ONLY output the corrected, complete Java code for the `isServiceVulnerable` method.
+                - Do NOT output any explanations, markdown, or JSON.
+                - Ensure the corrected code is a single block of text.
+                - Pay close attention to the error message to identify the exact problem (e.g., missing imports, syntax errors, incorrect method calls).
+                """),
+                ("human", """
+                The following Java code failed to build. Please fix it.
+
+                Build Error:
+                {build_error}
+
+                Faulty Java Code:
+                {java_code}
+
+                Provide the corrected and complete `isServiceVulnerable` method implementation:
+                """)
+            ])
+            
+            # Create a new chain for fixing the code
+            fix_chain = fix_prompt | llm
+            
+            # Invoke the LLM with the error and the faulty code
+            fix_response = fix_chain.invoke({
+                "build_error": verification_result,
+                "java_code": plugin_implementation.java_code
+            })
+            
+            # The response content should be the corrected Java code
+            corrected_java_code = fix_response.content
+            
+            print(f"LLM proposed a fix of length: {len(corrected_java_code)}")
+            
+            # Update the plugin implementation with the new code
+            plugin_implementation.java_code = corrected_java_code
+            
+            # Re-create the plugin with the corrected code
+            plugin_dir = create_plugin_template(
+                plugin_name=plugin_implementation.plugin_name,
+                recommendation=plugin_implementation.recommendation,
+                java_code=plugin_implementation.java_code,
+                imports=plugin_implementation.imports
+            )
+            print(f"Re-created plugin with corrected code in: {plugin_dir}")
+
+        else: # This block executes if the loop completes without a break
+            print("\nError: Max retries reached. Could not fix the plugin build.")
+            return None
+
         # Verify the Java code was injected correctly
         if plugin_implementation.java_code and len(plugin_implementation.java_code) > 50:
             print("Java code successfully generated and injected into template")
