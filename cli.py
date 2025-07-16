@@ -61,8 +61,10 @@ def main():
         print(f"Using {args.model} from {args.model_provider}")
         
         result = create_plugin_workflow(args, args.vulnerability_type)
-        
-        print(f"Plugin creation completed: {result.plugin_name} {result.description}, {result.endpoints}, {result.imports}") # type: ignore
+        if result:
+            print(f"Plugin creation completed: {result['plugin_name']} {result['description']},  {result['imports']}") 
+        else:
+            print("ERROROROROROROOROR")
         
         # Show the created plugin directory
         plugin_dir = f"tsunami-agent-plugins/{args.vulnerability_type}_vulnerability"
