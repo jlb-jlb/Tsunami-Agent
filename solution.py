@@ -1,9 +1,8 @@
 import subprocess
 from pathlib import Path
 import os
-from unittest import skip
 
-def _build_plugin(plugin_name: str, verbose: bool = False):
+def _build_plugin(plugin_name: str, verbose: bool = True):
     """
     Helper function to build a Tsunami plugin.
     
@@ -11,7 +10,7 @@ def _build_plugin(plugin_name: str, verbose: bool = False):
         plugin_name: The name of the plugin directory in 'crafted-plugins'.
         verbose: If True, show the output of the build command.
     """
-    path = Path(__file__).parent / "tsunami-agent"/ "tsunami-agent-plugins" / plugin_name
+    path = Path(__file__).parent / "tsunami-agent-plugins" / plugin_name
     print(f"Building plugin: {plugin_name}...")
     command = ["build-plugin", str(path)]
     
@@ -53,7 +52,7 @@ def generate_and_run_plugins():
         # 'WeakPasswordDetectorPlugin_vulnerability', # NEI
         # 'SqlInjectionDetectorPlugin_vulnerability', # FINDET 100%
         # 'SensitiveDataExposureDetectorPlugin_vulnerability', # Hmmm NEI
-        'BrokenAuthenticationDetectorPlugin_vulnerability', #THIS CAUSES ERROR
+        'BrokenAuthenticationDetector_vulnerability', #THIS CAUSES ERROR
         # 'ImproperInputValidationDetectorPlugin_vulnerability', 
         # 'InsecureDeserializationDetector_vulnerability', 
         # 'BrokenAccessControlDetectorPlugin_vulnerability', 
@@ -63,7 +62,8 @@ def generate_and_run_plugins():
         # 'XxeInjectionDetectorPlugin_vulnerability'
         ]
 
-    plugins = os.listdir(Path(__file__).parent / "tsunami-agent" / "tsunami-agent-plugins")
+    plugins = os.listdir(Path(__file__).parent / "tsunami-agent-plugins")
+    # tsunami-agent-plugins
     subprocess.run(["echo", "Found plugins: ", str(plugins)])
     for plugin in plugins:
         if plugin in skip_plugins: 
