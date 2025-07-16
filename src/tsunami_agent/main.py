@@ -9,6 +9,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
 from .tools import vulnerability_reader_tool, example_detector_reader_tool, read_vulnerability_file, create_plugin_template
+from .util import extract_java_from_markdown
 
 
 load_dotenv()
@@ -52,7 +53,7 @@ def parse_raw_json_response(output: str, vulnerability_type: str) -> PluginImple
             json_str = json_match.group(1)
             try:
                 plugin_data = json.loads(json_str)
-                print("✓ Successfully parsed JSON")
+                print("Successfully parsed JSON")
                 return PluginImplementation(
                     vulnerability_type=plugin_data.get('vulnerability_type', vulnerability_type),
                     plugin_name=plugin_data.get('plugin_name', vulnerability_type + '_detector'),
@@ -98,7 +99,7 @@ def parse_raw_json_response(output: str, vulnerability_type: str) -> PluginImple
         import_matches = re.findall(r'"([^"]*)"', imports_str)
         imports = import_matches
     
-    print(f"✓ Extracted fields: vuln_type={vuln_type}, plugin_name={plugin_name}, java_code_length={len(java_code)}, imports={imports}")
+    print(f"Extracted fields: vuln_type={vuln_type}, plugin_name={plugin_name}, java_code_length={len(java_code)}, imports={imports}")
     
     return PluginImplementation(
         vulnerability_type=vuln_type,
@@ -175,7 +176,7 @@ def extract_java_code_from_raw_response(output: str) -> str:
         java_code = java_code.rstrip('", \n\t')
         
         if len(java_code) > 100:  # Reasonable threshold
-            print(f"✓ Extracted Java code with improved parsing: {len(java_code)} characters")
+            print(f"Extracted Java code with improved parsing: {len(java_code)} characters")
             return java_code
     
     # Strategy 2: Try regex patterns as fallback
@@ -191,7 +192,7 @@ def extract_java_code_from_raw_response(output: str) -> str:
             # Unescape the Java code
             java_code = java_code.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
             if len(java_code) > 100:  # Reasonable threshold
-                print(f"✓ Extracted Java code from regex pattern: {len(java_code)} characters")
+                print(f"Extracted Java code from regex pattern: {len(java_code)} characters")
                 return java_code
     
     # Strategy 3: Look for Java method directly in the response
@@ -206,7 +207,7 @@ def extract_java_code_from_raw_response(output: str) -> str:
         method_match = re.search(pattern, output, re.DOTALL | re.MULTILINE)
         if method_match:
             java_code = method_match.group(1)
-            print(f"✓ Extracted Java method directly: {len(java_code)} characters")
+            print(f"Extracted Java method directly: {len(java_code)} characters")
             return java_code
     
     print("No Java code found, using fallback")
@@ -379,7 +380,7 @@ def create_plugin_workflow(args, vulnerability_type: str):
                 verification_result = process.stdout + "\n" + process.stderr
                 
                 if process.returncode == 0:
-                    print("✓ Java plugin built successfully!")
+                    print("Java plugin built successfully!")
                     break
             except (subprocess.TimeoutExpired, FileNotFoundError) as e:
                 verification_result = f"Build command failed: {e}"
@@ -422,9 +423,12 @@ def create_plugin_workflow(args, vulnerability_type: str):
             })
             
             # The response content should be the corrected Java code
-            corrected_java_code = fix_response.content
+            raw_corrected_code = fix_response.content
             
-            print(f"LLM proposed a fix of length: {len(corrected_java_code)}")
+            print(f"LLM proposed a fix of length: {len(raw_corrected_code)}")
+
+            # Use the new function to extract only the pure Java code
+            corrected_java_code = extract_java_from_markdown(raw_corrected_code)
             
             # Update the plugin implementation with the new code
             plugin_implementation.java_code = corrected_java_code
