@@ -118,8 +118,6 @@ graph TD
 #### 1. **LLM Agent** (`main.py`)
 - Orchestrates the entire plugin generation workflow
 - Uses LangChain for tool calling and structured output
-- Implements robust JSON parsing for LLM responses
-- Handles complex escape character processing
 
 #### 2. **Tools System** (`tools.py`)
 - **Vulnerability Reader**: Parses markdown vulnerability descriptions
