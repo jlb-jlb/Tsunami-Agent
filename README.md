@@ -100,19 +100,6 @@ tsunami-agent/
 ## Workflow Architecture
 
 ```mermaid
-graph TD
-    A[Vulnerability MD Files] --> B[Agent Analysis]
-    C[Example Plugin] --> B
-    B --> D[LLM Code Generation]
-    D --> E[Java Code + Imports]
-    E --> F[Template Integration]
-    F --> G[Complete Plugin]
-    G --> H[Debugger Chain: Build Verification]
-    H -- "Build Unsuccessful (max 3x)" --> I[Error Handling] --> H
-    H -- "Build Successful" --> J[Plugin Output]
-
-```
-```mermaid
 flowchart TD
     subgraph Inputs
         direction LR
