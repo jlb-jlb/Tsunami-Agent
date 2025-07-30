@@ -112,6 +112,36 @@ graph TD
     H -- "Build Successful" --> J[Plugin Output]
 
 ```
+```mermaid
+flowchart TD
+    subgraph Inputs
+        direction LR
+        A[Vulnerability MD Files]
+        C[Example Plugin]
+    end
+
+    A --> B[Agent Analysis]
+    C --> B
+    B --> D[LLM Generation]
+    D --> E[Java Code + Imports]
+    E --> F[Template Integration]
+    F --> G[Complete Plugin]
+    G --> H{Build Check}
+    H -- "Fail (≤3x)" --> I[Error Handling] --> H
+    H -- "Success" --> J[Plugin Output]
+    J --- K[Ready for Submission]
+
+    %% Node Styling
+    classDef input fill:#e0e7ef,stroke:#888,stroke-dasharray: 5 5, color:#333, font-size:14px;
+    classDef process fill:#f6f8fc,stroke:#333,stroke-width:1.5px, color:#111, font-size:15px;
+    classDef decision fill:#fffbe7,stroke:#e2a800,stroke-width:2px, color:#a27d00, font-size:15px, font-weight:bold,stroke-dasharray: 2 2;
+    classDef output fill:#e6fbe0,stroke:#217a30,stroke-width:2px, color:#217a30, font-size:15px, font-weight:bold;
+
+    class A,C input;
+    class B,D,E,F,G,I process;
+    class H decision;
+    class J,K output;
+```
 
 ### Key Components
 
