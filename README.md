@@ -2,7 +2,7 @@
 
 An intelligent agent that automatically generates **Tsunami Security Scanner plugins** for OWASP Juice Shop vulnerabilities using Large Language Models (LLMs).
 
-See also the Project Report: RAID_Project_Report_Joscha_Bisping.pdf
+See also the Project Report: [RAID Project Report](./RAID_Project_Report_Joscha_Bisping.pdf)
 
 ## Overview
 - **Reads vulnerability descriptions** from markdown files
