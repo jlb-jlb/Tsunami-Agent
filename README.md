@@ -36,7 +36,7 @@ cd tsunami-agent
 ### 2. Install Dependencies
 ```bash
 poetry install
-# or on the server
+# or on the test server (only available during the Challenge)
 python3 -m pip install . --break-system-packages
 ```
 
